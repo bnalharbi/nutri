@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نظام الجرد — V4.2 (أوفلاين)</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--accent:#2563eb;--accent-2:#1e40af;--text:#0f172a;--muted:#eef2f7}
+*{box-sizing:border-box}
+.hidden{display:none}
+.badge{background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:6px 10px;display:inline-flex;gap:6px;align-items:center}
+.tab-btn{border:1px solid #e5e7eb;background:#fff;padding:8px 10px;border-radius:10px;cursor:pointer}
+.tab-btn.active{background:#1e40af;color:#fff;border-color:#1e40af}
+.btn{border:1px solid #e5e7eb;background:#fff;padding:8px 10px;border-radius:10px;cursor:pointer}
+.btn.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+* :focus{outline:2px solid #2563eb;outline-offset:2px}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;padding:12px;position:sticky;top:0;z-index:10}
+.header-row{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.lang-btn{border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:999px;padding:6px 10px;cursor:pointer}
+.wrap{max-width:1200px;margin:16px auto;padding:0 12px}
+.card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,.06)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.table-wrap{overflow:auto;border-radius:8px;border:1px solid #e5e7eb;background:#fff}
+table{border-collapse:collapse;width:100%;min-width:980px}
+th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:13px}
+thead th{position:sticky;top:0;background:#f8fafc}
+.status-dot{width:14px;height:14px;border-radius:50%;display:inline-block}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+#monthlyGrid table td,#monthlyGrid table th,#dailyGrid table td,#dailyGrid table th,#moxGrid table td,#moxGrid table th,#annualGrid table td,#annualGrid table th{font-size:12px;height:30px;padding:6px}
+/* print */
+@media print{
+  header,.no-print,.floating-modal{display:none!important}
+  body{background:#fff}
+  .card{box-shadow:none}
+  .table-wrap{border:none;overflow:visible}
+  table{width:100%;table-layout:fixed;font-size:11px}
+  td,th{word-wrap:break-word}
+}
+/* modal draggable */
+.floating-modal{position:fixed;top:80px;left:calc(50% - 280px);width:560px;max-width:96vw;background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(2,6,23,.25);display:none;z-index:1000}
+.modal-head{padding:10px 12px;background:#f4f6ff;border-bottom:1px solid #e5e7eb;cursor:move;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:12px}
+/* users modal small */
+#usersModal{width:380px;left:calc(50% - 190px)}
+/* pale section for add product */
+.pale{background:#fbfdff;border:1px dashed #c7d2fe}
+/* mobile hint bar */
+.mobile-hint{display:none;gap:8px;align-items:center;background:#fff3cd;border:1px solid #ffeeba;padding:6px 10px;border-radius:10px}
+@media(max-width:800px){.mobile-hint{display:flex}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <div><b id="appTitle">📦 نظام الجرد — V4.2</b><div style="font-size:12px" id="subtitle">يعمل أوفلاين</div></div>
+    <div class="row">
+      <div class="mobile-hint">📱 نمط الجوال — <a href="mobile.html">افتح صفحة الجوال</a></div>
+      <button class="lang-btn" id="langTop" onclick="toggleLang()">🌐 EN</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- login -->
+  <div id="loginView" class="card" style="max-width:520px;margin:20px auto">
+    <div style="text-align:center"><b id="loginTitle">تسجيل الدخول</b><div class="subtle" id="loginHint">ادخل كمدير أو اعرض المنتجات فقط</div></div>
+    <div style="margin-top:10px">
+      <input id="userName" placeholder="اسم المستخدم" style="width:100%;padding:10px;margin-bottom:8px">
+      <input id="userPass" placeholder="كلمة المرور" type="password" style="width:100%;padding:10px;margin-bottom:8px">
+      <div class="row">
+        <button class="btn primary" onclick="login()">🔑 <span id="loginBtn">دخول</span></button>
+        <button class="btn" onclick="openViewer()">👁️ <span id="viewOnlyBtn">عرض المنتجات</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- app -->
+  <div id="appView" class="card hidden">
+    <div class="row no-print" style="justify-content:space-between">
+      <div><span id="whoBadge" class="badge">👤 <b id="who">مدير</b></span></div>
+      <div class="row">
+        <button class="btn" onclick="logout()">🚪 <span id="logoutTxt">تسجيل الخروج</span></button>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="row no-print" style="margin-top:10px">
+      <button class="tab-btn active" data-tab="products" onclick="switchTab('products')" id="tabBtnProducts">المنتجات</button>
+      <button class="tab-btn" data-tab="monthly" onclick="switchTab('monthly')" id="tabBtnMonthly">📅 الاستلام اليومي</button>
+      <button class="tab-btn" data-tab="daily" onclick="switchTab('daily')" id="tabBtnDaily">📊 المصروف اليومي</button>
+      <button class="tab-btn" data-tab="mox" onclick="switchTab('mox')" id="tabBtnMox">🧮 الملخص الشهري</button>
+      <button class="tab-btn" data-tab="annual" onclick="switchTab('annual')" id="tabBtnAnnual">📈 الملخص السنوي</button>
+    </div>
+
+    <!-- products -->
+    <section id="tab-products">
+      <div class="row no-print pale" style="margin-top:10px">
+        <button class="btn" onclick="openProductModal()">➕ إضافة منتج</button>
+        <button class="btn" onclick="printProducts()">🖨️ طباعة</button>
+        <button class="btn" onclick="printLabels()">🏷️ طباعة الملصقات</button>
+        <button class="btn" id="usersBtn" onclick="openUsersModal()">👥 إدارة المستخدمين</button>
+        <label class="badge">📱 <input type="file" id="mobileFile" accept=".json" onchange="importMobileJSON(event)"></label>
+        <label class="badge">📥 <input type="file" id="csvFile" accept=".csv" onchange="importCSV(event)"></label>
+        <button class="btn" onclick="exportCSV()">📤 تصدير CSV</button>
+      </div>
+      <div class="table-wrap" style="margin-top:10px">
+        <table id="productsTable">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+              <th>الحالة</th>
+              <th>اسم المنتج</th>
+              <th>تاريخ الانتهاء</th>
+              <th>رقم اللوت</th>
+              <th>باركود اللوت</th>
+              <th>الكمية</th>
+              <th>ملاحظات</th>
+              <th class="no-print">اجراءات</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- monthly receipts -->
+    <section id="tab-monthly" class="hidden">
+      <div class="row no-print" style="margin-top:8px">
+        <label>الشهر</label><select id="monthSel"></select>
+        <label>السنة</label><select id="yearSel"></select>
+        <button class="btn" onclick="buildMonthly(true)">👁️ عرض</button>
+        <button class="btn" onclick="printSection('tab-monthly')">🖨️ طباعة</button>
+      </div>
+      <div id="monthlyGrid" style="margin-top:10px" class="table-wrap"></div>
+    </section>
+
+    <!-- daily consumption -->
+    <section id="tab-daily" class="hidden">
+      <div class="row no-print" style="margin-top:8px">
+        <label>الشهر</label><select id="cMonthSel"></select>
+        <label>السنة</label><select id="cYearSel"></select>
+        <button class="btn" onclick="buildDaily(true)">👁️ عرض</button>
+        <button class="btn" onclick="printSection('tab-daily')">🖨️ طباعة</button>
+      </div>
+      <div id="dailyGrid" style="margin-top:10px" class="table-wrap"></div>
+    </section>
+
+    <!-- monthly combined summary -->
+    <section id="tab-mox" class="hidden">
+      <div class="row no-print" style="margin-top:8px">
+        <label>الشهر</label><select id="mxMonthSel"></select>
+        <label>السنة</label><select id="mxYearSel"></select>
+        <button class="btn" onclick="buildMonthlySummary(true)">📊 عرض الملخص</button>
+        <button class="btn" onclick="printSection('tab-mox')">🖨️ طباعة</button>
+      </div>
+      <div id="moxGrid" class="table-wrap" style="margin-top:10px"></div>
+    </section>
+
+    <!-- annual -->
+    <section id="tab-annual" class="hidden">
+      <div class="row no-print" style="margin-top:8px">
+        <label>السنة</label><select id="aYearSel"></select>
+        <button class="btn" onclick="buildAnnual()">📈 عرض الملخص</button>
+        <button class="btn" onclick="printSection('tab-annual')">🖨️ طباعة الملخص</button>
+      </div>
+      <div id="annualGrid" class="table-wrap" style="margin-top:10px"></div>
+    </section>
+  </div>
+
+  <!-- viewer -->
+  <div id="viewerView" class="card hidden view-only">
+    <div class="row no-print" style="justify-content:space-between">
+      <div class="badge">👁️ عرض المنتجات</div>
+      <div><button class="btn" onclick="backToLogin()">🔑 تسجيل الدخول</button></div>
+    </div>
+    <div class="table-wrap" style="margin-top:10px">
+      <table id="viewerProducts"><thead><tr><th>الحالة</th><th>اسم المنتج</th><th>تاريخ الانتهاء</th><th>رقم اللوت</th><th>باركود اللوت</th><th>الكمية</th><th>ملاحظات</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- product modal -->
+<div id="productModal" class="floating-modal" role="dialog" aria-modal="true">
+  <div class="modal-head" id="modalHeader"><b id="modalTitle">إضافة منتج</b><div><button class="btn" onclick="closeProductModal()">✖</button></div></div>
+  <div class="modal-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <label>اسم المنتج</label>
+        <input id="pName" list="productNames" type="text" />
+        <datalist id="productNames"></datalist>
+      </div>
+      <div>
+        <label>تاريخ الانتهاء</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="pExpiryText" placeholder="DD/MM/YYYY" style="flex:1;padding:8px">
+          <button class="btn" onclick="openCalendar()">📅</button>
+          <input id="pExpiryDate" type="date" class="hidden" onchange="syncDateFromPicker()">
+        </div>
+      </div>
+      <div><label>رقم اللوت</label><input id="pLot" type="text"></div>
+      <div><label>الكمية</label><input id="pQty" type="number" min="0" value="0"></div>
+      <div style="grid-column:1 / -1"><label>ملاحظات</label><input id="pNote" type="text"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+      <button class="btn" onclick="closeProductModal()">↩️ إلغاء</button>
+      <button class="btn primary" onclick="saveProduct()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- users modal -->
+<div id="usersModal" class="floating-modal">
+  <div class="modal-head"><b>إدارة المستخدمين</b><div><button class="btn" onclick="closeUsersModal()">✖</button></div></div>
+  <div class="modal-body">
+    <div class="row">
+      <input id="newUserName" placeholder="اسم المستخدم" type="text">
+      <input id="newUserPass" placeholder="كلمة المرور" type="password">
+      <button class="btn primary" onclick="addUser()">➕ إضافة</button>
+    </div>
+    <ul id="usersList"></ul>
+  </div>
+</div>
+
+<script>
+// i18n stub
+let LANG = localStorage.getItem('lang_v42') || 'ar';
+function toggleLang(){ LANG = LANG==='ar'?'en':'ar'; localStorage.setItem('lang_v42', LANG); alert(LANG==='ar'?'تم التحويل للعربية':'Switched to English'); }
+
+// storage
+const LS_PRODUCTS='inv_products_v42', LS_MONTHLY='inv_monthly_v42', LS_DAILY='inv_daily_v42', LS_USERS='inv_users_v42', LS_LAST='inv_last_sel_v42';
+let products = JSON.parse(localStorage.getItem(LS_PRODUCTS) || '[]');
+let monthly = JSON.parse(localStorage.getItem(LS_MONTHLY) || '{}'); // received
+let daily = JSON.parse(localStorage.getItem(LS_DAILY) || '{}');     // consumed
+let users = JSON.parse(localStorage.getItem(LS_USERS) || '[{"user":"admin","pass":"admin"}]');
+let lastSel = JSON.parse(localStorage.getItem(LS_LAST) || '{}');
+function saveAll(){ localStorage.setItem(LS_PRODUCTS, JSON.stringify(products)); localStorage.setItem(LS_MONTHLY, JSON.stringify(monthly)); localStorage.setItem(LS_DAILY, JSON.stringify(daily)); localStorage.setItem(LS_USERS, JSON.stringify(users)); localStorage.setItem(LS_LAST, JSON.stringify(lastSel)); }
+function uid(){ return 'id_'+Math.random().toString(36).slice(2,9); }
+
+// login / views
+let editingId = null;
+let currentUser = null;
+function login(){ const u=document.getElementById('userName').value.trim(); const p=document.getElementById('userPass').value.trim(); const found=users.find(x=>x.user===u && x.pass===p); if(found){ currentUser=u; document.getElementById('who').textContent = u; openApp(); } else { alert('بيانات الدخول غير صحيحة'); } }
+function logout(){ currentUser=null; document.getElementById('appView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); }
+function openViewer(){ document.getElementById('loginView').classList.add('hidden'); document.getElementById('viewerView').classList.remove('hidden'); buildViewer(); }
+function backToLogin(){ document.getElementById('viewerView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); }
+function openApp(){ document.getElementById('loginView').classList.add('hidden'); document.getElementById('viewerView').classList.add('hidden'); document.getElementById('appView').classList.remove('hidden'); switchTab('products'); renderProducts(); initSelectors(); document.getElementById('usersBtn').style.display = (currentUser==='admin') ? 'inline-block' : 'none'; }
+
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-tab="'+t+'"]').classList.add('active');
+  ['products','monthly','daily','mox','annual'].forEach(id=>document.getElementById('tab-'+id).classList.add('hidden'));
+  document.getElementById('tab-'+t).classList.remove('hidden');
+  if(t==='monthly'){buildMonthlySelectors();buildMonthly();}
+  if(t==='daily'){buildDailySelectors();buildDaily();}
+  if(t==='mox'){buildMonthlySummarySelectors();buildMonthlySummary();}
+  if(t==='annual'){buildAnnualSelectors();}
+}
+
+// helpers
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+// Code39 barcode
+const CODE39 = { '0':'101001101101','1':'110100101011','2':'101100101011','3':'110110010101','4':'101001101011','5':'110100110101','6':'101100110101','7':'101001011011','8':'110100101101','9':'101100101101','A':'110101001011','B':'101101001011','C':'110110100101','D':'101011001011','E':'110101100101','F':'101101100101','G':'101010011011','H':'110101001101','I':'101101001101','J':'101011001101','K':'110101010011','L':'101101010011','M':'110110101001','N':'101011010011','O':'110101101001','P':'101101101001','Q':'101010110011','R':'110101011001','S':'101101011001','T':'101011011001','U':'110010101011','V':'100110101011','W':'110011010101','X':'100101101011','Y':'110010110101','Z':'100110110101','-':'100101011011','.' :'110010101101',' ':'100110101101','$':'100100100101','/':'100100101001','+':'100101001001','%':'101001001001','*':'100101101101'};
+function renderBarcodeSVG(text){
+  if(!text) return '';
+  text = '*'+String(text).toUpperCase().replace(/[^0-9A-Z\.\-\ \$\/\+%]/g,'')+'*';
+  let pattern='';
+  for(let ch of text){ if(!CODE39[ch]) return ''; pattern += CODE39[ch] + '0'; }
+  let w = 2, h = 36, x = 0;
+  let svg = '<svg width="'+(pattern.length*w)+'" height="'+h+'" xmlns="http://www.w3.org/2000/svg">';
+  for(let i=0;i<pattern.length;i++){ if(pattern[i]==='1'){ svg += '<rect x="'+x+'" y="0" width="'+w+'" height="'+h+'"/>'; } x += w; }
+  svg += '</svg>';
+  return svg;
+}
+
+// status dot
+function expiryStatusDot(expiry){
+  if(!expiry) return '<span class="status-dot" style="background:#9ca3af"></span>';
+  const parts = expiry.split('/'); if(parts.length!==3) return '<span class="status-dot" style="background:#9ca3af"></span>';
+  const d=Number(parts[0]), m=Number(parts[1])-1, y=Number(parts[2]);
+  const ex = new Date(y,m,d); const diff = Math.ceil((ex - new Date())/(1000*60*60*24));
+  let color='#9ca3af'; if(diff>90) color='#22c55e'; else if(diff>60) color='#fb923c'; else if(diff>30) color='#facc15'; else color='#ef4444';
+  return '<span class="status-dot" title="باقي '+diff+' يوم" style="background:'+color+'"></span>';
+}
+
+// products rendering
+function renderProducts(){
+  products.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const tbody=document.querySelector('#productsTable tbody'); tbody.innerHTML='';
+  const dl = document.getElementById('productNames'); if(dl) dl.innerHTML='';
+  products.forEach((p)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = '<td><input type="checkbox" class="sel" data-id="'+p.id+'"></td>'
+      + '<td>'+expiryStatusDot(p.expiry)+'</td>'
+      + '<td>'+escapeHtml(p.name)+'</td>'
+      + '<td>'+escapeHtml(p.expiry||"")+'</td>'
+      + '<td>'+escapeHtml(p.lot||"")+'</td>'
+      + '<td>'+renderBarcodeSVG(p.lot||"")+'</td>'
+      + '<td>'+Number(p.qty||0)+'</td>'
+      + '<td>'+escapeHtml(p.note||"")+'</td>'
+      + '<td class="no-print"><button class="btn" onclick="editProduct(\''+p.id+'\')">✏️</button> <button class="btn" onclick="delProduct(\''+p.id+'\')">🗑️</button></td>';
+    tbody.appendChild(tr);
+    const option = document.createElement('option'); option.value = p.name; dl.appendChild(option);
+  });
+  buildViewer(); saveAll();
+}
+
+function buildViewer(){
+  const tbody = document.querySelector('#viewerProducts tbody'); if(!tbody) return; tbody.innerHTML='';
+  products.slice().sort((a,b)=>a.name.localeCompare(b.name,'ar')).forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>'+expiryStatusDot(p.expiry)+'</td><td>'+escapeHtml(p.name)+'</td><td>'+escapeHtml(p.expiry||"")+'</td><td>'+escapeHtml(p.lot||"")+'</td><td>'+renderBarcodeSVG(p.lot||"")+'</td><td>'+Number(p.qty||0)+'</td><td>'+escapeHtml(p.note||"")+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// modal handling (draggable)
+function openProductModal(){ editingId=null; document.getElementById('modalTitle').textContent='إضافة منتج'; document.getElementById('pName').value=''; document.getElementById('pExpiryText').value=''; document.getElementById('pExpiryDate').value=''; document.getElementById('pLot').value=''; document.getElementById('pQty').value=0; document.getElementById('pNote').value=''; showModal(); }
+function showModal(){ const m=document.getElementById('productModal'); m.style.display='block'; dragElement(m, document.getElementById('modalHeader')); }
+function closeProductModal(){ document.getElementById('productModal').style.display='none'; }
+function dragElement(elmnt, handle){ let pos1=0,pos2=0,pos3=0,pos4=0; handle.onmousedown = dragMouseDown; function dragMouseDown(e){ e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; } function elementDrag(e){ e.preventDefault(); pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; elmnt.style.top = (elmnt.offsetTop - pos2) + 'px'; elmnt.style.left = (elmnt.offsetLeft - pos1) + 'px'; } function closeDragElement(){ document.onmouseup = null; document.onmousemove = null; } }
+
+function editProduct(id){ const p = products.find(x=>x.id===id); if(!p) return; editingId=id; showModal(); document.getElementById('modalTitle').textContent='تعديل منتج'; document.getElementById('pName').value=p.name; document.getElementById('pExpiryText').value=p.expiry; document.getElementById('pLot').value=p.lot||''; document.getElementById('pQty').value=p.qty||0; document.getElementById('pNote').value=p.note||''; }
+function delProduct(id){ if(!confirm('هل أنت متأكد؟')) return; products = products.filter(x=>x.id!==id); renderProducts(); }
+
+// save product: add qty ONLY to monthly (received). NOT to daily.
+function saveProduct(){
+  const name = document.getElementById('pName').value.trim();
+  const expiry = document.getElementById('pExpiryText').value.trim();
+  const lot = document.getElementById('pLot').value.trim();
+  const qty = Number(document.getElementById('pQty').value||0);
+  const note = document.getElementById('pNote').value.trim();
+  if(!name){ alert('الاسم مطلوب'); return; }
+  const today = new Date(); const key = keyMonth(today.getFullYear(), today.getMonth()+1); const day = today.getDate();
+  const dup = products.find(x=>x.name===name && x.lot===lot && x.expiry===expiry);
+  if(editingId){
+    const p = products.find(x=>x.id===editingId);
+    Object.assign(p,{name,expiry,lot,qty,note});
+  } else if(dup){
+    // لا نضيف للمنتجات، فقط نجمع في الاستلام اليومي
+    if(!monthly[key]) monthly[key]={}; if(!monthly[key][name]) monthly[key][name] = {};
+    monthly[key][name][day] = (monthly[key][name][day]||0) + qty;
+  } else {
+    products.push({id:uid(),name,expiry,lot,qty,note});
+    if(qty>0){
+      if(!monthly[key]) monthly[key]={}; if(!monthly[key][name]) monthly[key][name] = {};
+      monthly[key][name][day] = (monthly[key][name][day]||0) + qty;
+    }
+  }
+  closeProductModal(); renderProducts(); saveAll();
+}
+
+// calendar helper
+function openCalendar(){ document.getElementById('pExpiryDate').click(); }
+function syncDateFromPicker(){ const v=document.getElementById('pExpiryDate').value; if(v){ const [y,m,d]=v.split('-'); document.getElementById('pExpiryText').value = d + '/' + m + '/' + y; } }
+
+// selectors
+function initSelectors(){
+  const now = new Date(); const m = now.getMonth()+1; const y = now.getFullYear();
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  // monthly
+  ['monthSel','cMonthSel','mxMonthSel'].forEach(id=>{ const el=document.getElementById(id); if(el && !el.options.length){ months.forEach((t,i)=>{ const o=document.createElement('option'); o.value=i+1; o.textContent=t; el.appendChild(o); }); } });
+  // years
+  ['yearSel','cYearSel','aYearSel','mxYearSel'].forEach(id=>{ const el=document.getElementById(id); if(el && !el.options.length){ for(let yy=y-3; yy<=y+3; yy++){ const o=document.createElement('option'); o.value=yy; o.textContent=yy; el.appendChild(o);} } });
+  // defaults to last used or current
+  document.getElementById('monthSel').value = lastSel.month || m;
+  document.getElementById('yearSel').value = lastSel.year || y;
+  document.getElementById('cMonthSel').value = lastSel.cmonth || m;
+  document.getElementById('cYearSel').value = lastSel.cyear || y;
+  document.getElementById('mxMonthSel').value = lastSel.mxmonth || m;
+  document.getElementById('mxYearSel').value = lastSel.mxyear || y;
+  document.getElementById('aYearSel').value = lastSel.ayear || y;
+}
+
+// monthly grid (received only) with total as last column
+function keyMonth(y,m){ return y + '-' + String(m).padStart(2,'0'); }
+function buildMonthly(saveChoice){
+  const m = Number(document.getElementById('monthSel').value|| (new Date().getMonth()+1));
+  const y = Number(document.getElementById('yearSel').value|| new Date().getFullYear());
+  if(saveChoice){ lastSel.month=m; lastSel.year=y; saveAll(); }
+  const k = keyMonth(y,m);
+  if(!monthly[k]) monthly[k] = {};
+  const days = new Date(y,m,0).getDate();
+  const grid = document.getElementById('monthlyGrid'); grid.innerHTML='';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead'); let trh = document.createElement('tr');
+  trh.innerHTML = '<th>اسم المنتج</th>' + Array.from({length:days},(_,i)=>'<th>'+(i+1)+'</th>').join('') + '<th>المجموع</th>';
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  const sorted = products.slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  for(const p of sorted){
+    if(!monthly[k][p.name]) monthly[k][p.name] = {};
+    const tr = document.createElement('tr');
+    let total = 0;
+    let row = '<td style="text-align:left">'+escapeHtml(p.name)+'</td>';
+    for(let d=1; d<=days; d++){
+      const val = monthly[k][p.name][d] || '';
+      total += Number(val||0);
+      row += '<td><input type="number" min="0" value="'+val+'" style="width:70px" oninput="monthlyInput(\''+k+'\',\''+p.name.replace(/'/g,"\\'")+'\','+d+',this.value)" onkeydown="handleEnterMove(event)"></td>';
+    }
+    row += '<td><b>'+total+'</b></td>';
+    tr.innerHTML = row; tbody.appendChild(tr);
+  }
+  table.appendChild(tbody); grid.appendChild(table); saveAll();
+}
+function monthlyInput(key,pname,day,val){ if(!monthly[key]) monthly[key]={}; if(!monthly[key][pname]) monthly[key][pname]={}; monthly[key][pname][day] = Number(val||0); saveAll(); buildMonthly(false); }
+
+// daily grid (consumption) with total as last column
+function buildDaily(saveChoice){
+  const m = Number(document.getElementById('cMonthSel').value|| (new Date().getMonth()+1));
+  const y = Number(document.getElementById('cYearSel').value|| new Date().getFullYear());
+  if(saveChoice){ lastSel.cmonth=m; lastSel.cyear=y; saveAll(); }
+  const k = keyMonth(y,m);
+  if(!daily[k]) daily[k] = {};
+  const days = new Date(y,m,0).getDate();
+  const grid = document.getElementById('dailyGrid'); grid.innerHTML='';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead'); let trh = document.createElement('tr');
+  trh.innerHTML = '<th>اسم المنتج</th>' + Array.from({length:days},(_,i)=>'<th>'+(i+1)+'</th>').join('') + '<th>المجموع</th>';
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  const sorted = products.slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  for(const p of sorted){
+    if(!daily[k][p.name]) daily[k][p.name] = {};
+    const tr = document.createElement('tr');
+    let total = 0;
+    let row = '<td style="text-align:left">'+escapeHtml(p.name)+'</td>';
+    for(let d=1; d<=days; d++){
+      const val = daily[k][p.name][d] || '';
+      total += Number(val||0);
+      row += '<td><input type="number" min="0" value="'+val+'" style="width:70px" oninput="dailyInput(\''+k+'\',\''+p.name.replace(/'/g,"\\'")+'\','+d+',this.value)" onkeydown="handleEnterMove(event)"></td>';
+    }
+    row += '<td><b>'+total+'</b></td>';
+    tr.innerHTML = row; tbody.appendChild(tr);
+  }
+  table.appendChild(tbody); grid.appendChild(table); saveAll();
+}
+function dailyInput(key,pname,day,val){ if(!daily[key]) daily[key]={}; if(!daily[key][pname]) daily[key][pname]={}; daily[key][pname][day] = Number(val||0); saveAll(); buildDaily(false); }
+
+// monthly combined summary (days 1..31, each day has س/ص) and total as last column + row headers
+function buildMonthlySummarySelectors(){}
+function buildMonthlySummary(saveChoice){
+  const m = Number(document.getElementById('mxMonthSel').value|| (new Date().getMonth()+1));
+  const y = Number(document.getElementById('mxYearSel').value|| new Date().getFullYear());
+  if(saveChoice){ lastSel.mxmonth=m; lastSel.mxyear=y; saveAll(); }
+  const k = keyMonth(y,m);
+  const days = new Date(y,m,0).getDate();
+  const recv = monthly[k] || {};
+  const cons = daily[k] || {};
+
+  const grid = document.getElementById('moxGrid'); grid.innerHTML='';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  // two header rows
+  const tr1 = document.createElement('tr');
+  tr1.innerHTML = '<th rowspan="2">اسم المنتج</th>' + Array.from({length:days},(_,i)=>'<th colspan="2">'+(i+1)+'</th>').join('') + '<th rowspan="2">المجموع س</th><th rowspan="2">المجموع ص</th><th rowspan="2">الفرق</th>';
+  const tr2 = document.createElement('tr');
+  tr2.innerHTML = Array.from({length:days},()=>'<th>س</th><th>ص</th>').join('');
+  thead.appendChild(tr1); thead.appendChild(tr2); table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const names = products.map(p=>p.name).filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a.localeCompare(b,'ar'));
+  names.forEach(name=>{
+    const tr = document.createElement('tr');
+    let inTotal=0, outTotal=0;
+    let row = '<td style="text-align:left">'+escapeHtml(name)+'</td>';
+    for(let d=1; d<=days; d++){
+      const s = (recv[name] && recv[name][d]) ? Number(recv[name][d]) : 0;
+      const c = (cons[name] && cons[name][d]) ? Number(cons[name][d]) : 0;
+      inTotal += s; outTotal += c;
+      row += '<td>'+s+'</td><td>'+c+'</td>';
+    }
+    row += '<td><b>'+inTotal+'</b></td><td><b>'+outTotal+'</b></td><td><b>'+(inTotal-outTotal)+'</b></td>';
+    tr.innerHTML=row; tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  grid.appendChild(table);
+}
+
+// annual summary: per month (س/ص) + difference as last column, and total per product row at end
+function buildAnnualSelectors(){ const aYearSel = document.getElementById('aYearSel'); const y = new Date().getFullYear(); if(!aYearSel.options.length) for(let yy=y-3; yy<=y+3; yy++){ const o=document.createElement('option'); o.value=yy; o.textContent=yy; aYearSel.appendChild(o); } aYearSel.value = lastSel.ayear || y; }
+function buildAnnual(){
+  const y = Number(document.getElementById('aYearSel').value|| new Date().getFullYear());
+  lastSel.ayear = y; saveAll();
+  const recv = {}; const cons = {};
+  for(let m=1;m<=12;m++){
+    const k = keyMonth(y,m); const mon = monthly[k]||{}; const day = daily[k]||{};
+    for(const pname in mon){ const sum = Object.values(mon[pname]||{}).reduce((a,b)=>a+Number(b||0),0); (recv[pname]||(recv[pname]=Array(12).fill(0)))[m-1]+=sum; }
+    for(const pname in day){ const sum = Object.values(day[pname]||{}).reduce((a,b)=>a+Number(b||0),0); (cons[pname]||(cons[pname]=Array(12).fill(0)))[m-1]+=sum; }
+  }
+  products.forEach(p=>{ recv[p.name]=recv[p.name]||Array(12).fill(0); cons[p.name]=cons[p.name]||Array(12).fill(0); });
+  const grid=document.getElementById('annualGrid'); grid.innerHTML=''; const table=document.createElement('table'); const thead=document.createElement('thead');
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  let tr1='<tr><th rowspan="2">المنتج</th>'; months.forEach(_=> tr1+='<th colspan="2">'+_+'</th>'); tr1+='<th rowspan="2">إجمالي س</th><th rowspan="2">إجمالي ص</th><th rowspan="2">الفرق</th></tr>';
+  let tr2='<tr>'+months.map(_=>'<th>س</th><th>ص</th>').join('')+'</tr>';
+  thead.innerHTML = tr1 + tr2; table.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  const names = Object.keys(recv).concat(Object.keys(cons)).filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a.localeCompare(b,'ar'));
+  names.forEach(name=>{
+    const inArr = recv[name]||Array(12).fill(0); const outArr = cons[name]||Array(12).fill(0);
+    let inTotal = inArr.reduce((a,b)=>a+b,0); let outTotal = outArr.reduce((a,b)=>a+b,0);
+    let row='<td style="text-align:left">'+escapeHtml(name)+'</td>';
+    for(let i=0;i<12;i++) row += '<td>'+inArr[i]+'</td><td>'+outArr[i]+'</td>';
+    row += '<td><b>'+inTotal+'</b></td><td><b>'+outTotal+'</b></td><td><b>'+(inTotal-outTotal)+'</b></td>';
+    const tr=document.createElement('tr'); tr.innerHTML=row; tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); grid.appendChild(table);
+}
+
+// move down on Enter
+function handleEnterMove(e){
+  if(e.key === 'Enter'){ e.preventDefault(); const input = e.target; const td = input.closest('td'); if(!td) return; const table = input.closest('table'); const cellIndex = Array.from(td.parentElement.children).indexOf(td); const rows = Array.from(table.querySelectorAll('tbody tr')); const row = input.closest('tr'); const rowIndex = rows.indexOf(row); const nextRow = rows[rowIndex+1]; if(nextRow){ const nextInput = nextRow.children[cellIndex].querySelector('input'); if(nextInput) nextInput.focus(); } }
+}
+
+// compare receipts vs consumption (kept for reference in monthly tab)
+function compareReceiptsConsumption(){
+  switchTab('mox');
+}
+
+// import/export CSV & mobile JSON
+function exportCSV(){ const header=['name','expiry','lot','qty','note']; const rows = products.map(p=>[p.name,p.expiry,p.lot||'',p.qty||0,(p.note||'').replace(/\n/g,' ')]); const csv = [header.join(','), ...rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))].join('\r\n'); downloadText('products_v42.csv', csv); }
+function downloadText(filename, text){ const blob=new Blob([text],{type:'text/plain;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(url),5000); }
+function importCSV(ev){ const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=function(){ const lines=r.result.split(/\r?\n/).filter(Boolean); if(!lines.length) return alert('ملف CSV غير صالح'); let idx=0; const hdr=lines[0].toLowerCase(); if(hdr.includes('name')||hdr.includes('اسم')) idx=1; const out=[]; for(let i=idx;i<lines.length;i++){ const parts = parseCSVLine(lines[i]); if(parts.length<1) continue; const [name,expiry,lot,qty,note] = parts; if(!name) continue; out.push({id:uid(),name:name,expiry:expiry||'',lot:lot||'',qty:Number(qty||0),note:note||''}); } products = products.concat(out); renderProducts(); alert('تم الاستيراد'); }; r.readAsText(f); }
+function parseCSVLine(line){ const re = /"(?:[^"]|"")*"|[^,]+|(?<=,)(?=,)|^$/g; const cells = (line.match(re)||[]).map(function(s){ s=s.trim(); if(s.startsWith('"') && s.endsWith('"')) s=s.slice(1,-1).replace(/""/g,'"'); return s; }); while(cells.length && cells[cells.length-1]==='') cells.pop(); return cells; }
+
+// mobile import: expects [{name,expiry,lot,qty,note}]
+function importMobileJSON(ev){
+  const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=function(){ try{
+    const data=JSON.parse(r.result);
+    const today=new Date(); const key=keyMonth(today.getFullYear(), today.getMonth()+1); const day=today.getDate();
+    if(!monthly[key]) monthly[key]={};
+    data.forEach(function(it){
+      // merge logic: same (name+lot+expiry) -> add qty to monthly only
+      const dup = products.find(function(p){return p.name===it.name && p.lot===it.lot && p.expiry===(it.expiry||'');});
+      if(dup){
+        monthly[key][dup.name]=monthly[key][dup.name]||{};
+        monthly[key][dup.name][day]=(monthly[key][dup.name][day]||0)+Number(it.qty||0);
+      } else {
+        const newp={id:uid(),name:it.name,expiry:it.expiry||'',lot:it.lot||'',qty:Number(it.qty||0),note:it.note||''};
+        products.push(newp);
+        monthly[key][newp.name]=monthly[key][newp.name]||{};
+        monthly[key][newp.name][day]=(monthly[key][newp.name][day]||0)+Number(it.qty||0);
+      }
+    });
+    renderProducts(); saveAll(); alert('تم استيراد بيانات الجوال');
+  }catch(e){ alert('ملف جوال غير صالح'); } }; r.readAsText(f);
+}
+
+// users management (admin only)
+function openUsersModal(){ if(currentUser!=='admin'){ alert('هذه الميزة للمدير فقط'); return; } document.getElementById('usersModal').style.display='block'; renderUsers(); }
+function closeUsersModal(){ document.getElementById('usersModal').style.display='none'; }
+function renderUsers(){ const ul=document.getElementById('usersList'); ul.innerHTML=''; users.forEach(function(u,i){ const li=document.createElement('li'); li.textContent=u.user + (u.user==='admin'?' (مدير)':''); if(u.user!=='admin'){ const btn=document.createElement('button'); btn.className='btn'; btn.textContent='حذف'; btn.onclick=function(){ if(confirm('حذف؟')){ users.splice(i,1); localStorage.setItem(LS_USERS, JSON.stringify(users)); renderUsers(); } }; li.appendChild(btn); } ul.appendChild(li); }); }
+function addUser(){ if(currentUser!=='admin'){ alert('هذه الميزة للمدير فقط'); return; } const name=document.getElementById('newUserName').value.trim(); const pass=document.getElementById('newUserPass').value.trim(); if(!name||!pass){ alert('الاسم وكلمة المرور مطلوبان'); return; } users.push({user:name,pass:pass}); localStorage.setItem(LS_USERS, JSON.stringify(users)); renderUsers(); document.getElementById('newUserName').value=''; document.getElementById('newUserPass').value=''; }
+
+// printing
+function printProducts(){
+  const selected = Array.from(document.querySelectorAll('#productsTable .sel:checked')).map(function(i){return i.dataset.id;});
+  const items = selected.length ? products.filter(function(p){return selected.indexOf(p.id)>=0;}) : products;
+  const w=window.open('','_blank');
+  w.document.write('<html dir="rtl"><head><title>Print</title><style>table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:6px;text-align:center} .bc div{display:inline-block}</style></head><body>');
+  w.document.write('<h3>المنتجات — '+(new Date()).toLocaleString()+'</h3>');
+  w.document.write('<table><thead><tr><th>الاسم</th><th>تاريخ الانتهاء</th><th>اللوت</th><th>باركود اللوت</th><th>الكمية</th></tr></thead><tbody>');
+  items.forEach(function(p){ w.document.write('<tr><td>'+escapeHtml(p.name)+'</td><td>'+escapeHtml(p.expiry||"")+'</td><td>'+escapeHtml(p.lot||"")+'</td><td class="bc">'+renderBarcodeSVG(p.lot||"")+'</td><td>'+Number(p.qty||0)+'</td></tr>'); });
+  w.document.write('</tbody></table></body></html>'); w.document.close(); w.print();
+}
+function printLabels(){
+  const sel = Array.from(document.querySelectorAll('#productsTable .sel:checked')).map(function(i){return products.find(function(p){return p.id===i.dataset.id;});});
+  if(!sel.length){ alert('اختر منتج واحد على الأقل'); return; }
+  const wPx = prompt('عرض الملصق (px):','200'); const hPx = prompt('ارتفاع الملصق (px):','100');
+  const w=window.open('','_blank'); w.document.write('<html dir="rtl"><head><title>Labels</title><style>.lab{border:1px solid #000;margin:8px;padding:6px;display:inline-block;text-align:center;vertical-align:top}</style></head><body>');
+  sel.forEach(function(p){ w.document.write('<div class="lab" style="width:'+Number(wPx)+'px;height:'+Number(hPx)+'px"><h4>'+escapeHtml(p.name)+'</h4><p>'+escapeHtml(p.expiry||'')+'</p></div>'); });
+  w.document.write('</body></html>'); w.document.close(); w.print();
+}
+function printSection(id){ window.print(); }
+
+// toggle check all
+function toggleAll(chk){ document.querySelectorAll('#productsTable .sel').forEach(function(c){ c.checked = chk.checked; }); }
+
+// init
+document.addEventListener('DOMContentLoaded', function(){ renderProducts(); initSelectors(); });
+document.addEventListener("paste", function(e) {
+  const target = e.target;
+  if (target.tagName === "INPUT" && target.type === "number") {
+    e.preventDefault();
+
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
+    const matrix = rows.map(r => r.split(/\t/));
+
+    const td = target.closest("td");
+    const tr = target.closest("tr");
+    if (!td || !tr) return;
+
+    const table = tr.closest("table");
+    const rowIndex = Array.from(table.querySelectorAll("tbody tr")).indexOf(tr);
+    const colIndex = Array.from(tr.children).indexOf(td);
+
+    // الآن نمشي على المصفوفة (صفوف وأعمدة)
+    matrix.forEach((row, i) => {
+      const r = table.querySelectorAll("tbody tr")[rowIndex + i];
+      if (!r) return;
+      row.forEach((val, j) => {
+        const cell = r.cells[colIndex + j];
+        if (cell) {
+          const input = cell.querySelector("input");
+          if (input) {
+            input.value = val.trim();
+            input.dispatchEvent(new Event("input"));
+          }
+        }
+      });
+    });
+  }
+});
+
+</script>
+</body>
+</html>
