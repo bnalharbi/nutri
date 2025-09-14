@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>نظام الجرد — الجوال (إضافة فقط) V4.4</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f5f7fb;color:#0f172a}
+header{background:#2563eb;color:#fff;padding:10px;position:sticky;top:0}
+.wrap{padding:12px}
+.card{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(2,6,23,.08)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:10px 12px;cursor:pointer}
+input,textarea{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px}
+.list{width:100%;border-collapse:collapse}
+.list th,.list td{border-bottom:1px solid #eee;padding:8px;text-align:center}
+small{color:#64748b}
+</style>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABGklEQVR4Xu3aMQ0AIAwDwVn/6dsR1GkgJZhiO3cnM1ITyFtvPwEAAAAAAAAAAPi7Al/73AMsn4hJA1CwQyC4AJXECiwY4oUJhgWCEiYFYgFJhgiQApcYApwULBIKY2IJkOJVkThF9UBq0tOkEDr1Fc2KCCpQssjAumgqUgBSqX8gD5gEXi+7PJoLhK3AWoWFHDaN/IC13VgGHDCxQNSCy6wILDAxwLwK5cTDJJMDrWBfxcHrvLQhuU8xjG8sFYAgAAAAAAAAAAAAAA4L8CJQ9V2jOFL7gAAAAASUVORK5CYII=">
+
+</head>
+<body>
+<header><div class="row" style="justify-content:space-between"><b>📱 إضافة منتجات (جوال)</b><button class="btn" onclick="saveJSON()">💾 حفظ</button></div></header>
+<div class="wrap">
+  <div class="card">
+    <div class="row"><input id="mName" placeholder="اسم المنتج"><input id="mExpiry" placeholder="DD/MM/YYYY"></div>
+    <div class="row" style="margin-top:8px"><input id="mLot" placeholder="رقم اللوت"><input id="mQty" type="number" min="0" placeholder="الكمية"></div>
+    <textarea id="mNote" placeholder="ملاحظات" style="margin-top:8px"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="addBtn">➕ إضافة</button>
+      <button class="btn" id="clearBtn">🧹 تفريغ</button>
+      <input type="file" id="importLocal" accept=".json">
+      <a href="index.html">رجوع للكمبيوتر</a>
+    </div>
+    <small>بعد الحفظ، أرسل ملف <b>mobile_products.json</b> إلى الكمبيوتر ثم استورده من تبويب المنتجات (زر 📱).</small>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <b>السجل</b>
+    <table class="list">
+      <thead><tr><th>الاسم</th><th>تاريخ الانتهاء</th><th>اللوت</th><th>الكمية</th><th>ملاحظات</th><th>حذف</th></tr></thead>
+      <tbody id="mobileTableBody"></tbody>
+    </table>
+  </div>
+</div>
+<script>
+let lines = JSON.parse(localStorage.getItem('mobile_tmp_lines_v44')||'[]');
+const tableBody = document.getElementById("mobileTableBody");
+function renderList(){
+  tableBody.innerHTML='';
+  lines.forEach((it,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = '<td>'+it.name+'</td><td>'+ (it.expiry||'') +'</td><td>'+ (it.lot||'') +'</td><td>'+ (it.qty||0) +'</td><td>'+ (it.note||'') +'</td><td><button onclick="delLine('+i+')">🗑️</button></td>';
+    tableBody.appendChild(tr);
+  });
+}
+function addLine(){
+  const name=document.getElementById('mName').value.trim();
+  const expiry=document.getElementById('mExpiry').value.trim();
+  const lot=document.getElementById('mLot').value.trim();
+  const qty=Number(document.getElementById('mQty').value||0);
+  const note=document.getElementById('mNote').value.trim();
+  if(!name){ alert('الاسم مطلوب'); return; }
+  // merge by (name+lot+expiry)
+  const idx = lines.findIndex(x=>x.name===name && x.lot===lot && x.expiry===expiry);
+  if(idx>=0){ lines[idx].qty = Number(lines[idx].qty||0) + qty; if(note) lines[idx].note = note; }
+  else{ lines.push({name,expiry,lot,qty,note}); }
+  localStorage.setItem('mobile_tmp_lines_v44', JSON.stringify(lines));
+  renderList();
+
+function clearTable(){
+  if(confirm('هل أنت متأكد من تفريغ الجدول؟')){
+    lines = [];
+    localStorage.removeItem('mobile_tmp_lines_v44');
+    renderList();
+  }
+}
+document.getElementById('clearBtn').addEventListener('click', clearTable);
+
+  // clear fields
+  document.getElementById('mName').value=''; document.getElementById('mExpiry').value=''; document.getElementById('mLot').value=''; document.getElementById('mQty').value=''; document.getElementById('mNote').value='';
+}
+function delLine(i){ lines.splice(i,1); localStorage.setItem('mobile_tmp_lines_v44', JSON.stringify(lines)); renderList();
+
+function clearTable(){
+  if(confirm('هل أنت متأكد من تفريغ الجدول؟')){
+    lines = [];
+    localStorage.removeItem('mobile_tmp_lines_v44');
+    renderList();
+  }
+}
+document.getElementById('clearBtn').addEventListener('click', clearTable);
+ }
+function saveJSON(){
+  const blob=new Blob([JSON.stringify(lines)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='mobile_products.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  // بدون رسائل تنبيه حسب طلبك
+}
+document.getElementById('addBtn').addEventListener('click', addLine);
+document.getElementById('importLocal').addEventListener('change', function(ev){
+  const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=function(){ try{ lines = JSON.parse(r.result)||[]; localStorage.setItem('mobile_tmp_lines_v44', JSON.stringify(lines)); renderList();
+
+function clearTable(){
+  if(confirm('هل أنت متأكد من تفريغ الجدول؟')){
+    lines = [];
+    localStorage.removeItem('mobile_tmp_lines_v44');
+    renderList();
+  }
+}
+document.getElementById('clearBtn').addEventListener('click', clearTable);
+ }catch(e){ alert('ملف غير صالح'); } }; r.readAsText(f);
+});
+renderList();
+
+function clearTable(){
+  if(confirm('هل أنت متأكد من تفريغ الجدول؟')){
+    lines = [];
+    localStorage.removeItem('mobile_tmp_lines_v44');
+    renderList();
+  }
+}
+document.getElementById('clearBtn').addEventListener('click', clearTable);
+
+</script>
+</body>
+</html>
